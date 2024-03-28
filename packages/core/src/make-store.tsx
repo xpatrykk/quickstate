@@ -1,32 +1,23 @@
 import {produce} from "immer";
-import {
-	Action,
-	ActionWithPayload,
-	AsyncActionCreator,
-	AsyncActionFulfilledMeta,
-	AsyncActionPendingMeta,
-	AsyncActionRejectedMeta,
-	AsyncActionWithPayload,
-	MakeStoreConfig,
-	Selector,
-	Store,
-	StoreBase,
-} from "./types";
-import {isActionWithPayload} from "./utils";
-import React, {createContext, useContext, useEffect, useState} from "react";
+import React, {createContext} from "react";
+import type {MakeStoreConfig, StateTransformer, Store, StoreBase, TransformState} from "./types";
 import {getWithStateProviderHoc} from "./with-state-provider";
+import {createActionImpl} from "./create-action-impl";
+import {createAsyncActionImpl} from "./create-async-action-impl";
+import {setKeyValueImpl} from "./set-key-value-impl";
+import {createSelectorImpl} from "./create-selector-impl";
+import {useSelectedValueImpl} from "./use-selected-value-impl";
 
 export const makeStore = <State extends object>(config: MakeStoreConfig<State>): Store<State> => {
 	const createStore = (): StoreBase<State> => {
 		const {initialState} = config;
 
-		let state = initialState;
+		let state: State = initialState;
 
 		let listeners: (() => void)[] = [];
 
 		const subscribe: Store<State>["subscribe"] = (listener: () => void) => {
 			listeners.push(listener);
-
 			return () => {
 				listeners = listeners.filter((l) => l !== listener);
 			};
@@ -34,63 +25,24 @@ export const makeStore = <State extends object>(config: MakeStoreConfig<State>):
 
 		const getState = () => state;
 
-		const publishNewState = (newState: State) => {
+		const publishState = (newState: State) => {
 			state = newState;
 			listeners.forEach((listener) => listener());
 		};
 
-		const setState: Store<State>["setState"] = (newState) => publishNewState(produce(getState(), () => newState));
+		const transformState: TransformState<State> = (producer: StateTransformer<State>) =>
+			publishState(produce(getState(), producer));
 
-		const createAction: Store<State>["createAction"] = <Payload,>(
-			action: Action<State> | ActionWithPayload<State, Payload>
-		) => {
-			return function (this: any, ...args: unknown[]) {
-				if (isActionWithPayload(action)) {
-					const payload = args[0] as Payload;
-					return void publishNewState(produce(getState(), (draft) => action(draft, payload)));
-				}
+		const setState: Store<State>["setState"] = (newState) => transformState(() => newState);
 
-				publishNewState(produce(getState(), action));
-			} as any;
-		};
+		const createAction: Store<State>["createAction"] = createActionImpl(transformState);
 
-		const createAsyncAction: Store<State>["createAsyncAction"] = <Creator extends AsyncActionCreator>(
-			action: AsyncActionWithPayload<State, Creator>
-		) => {
-			return async function (this: any, ...args: Parameters<Creator>) {
-				const {creator, onRejected, onFulfilled, onPending} = action;
+		const createAsyncAction: Store<State>["createAsyncAction"] = createAsyncActionImpl(transformState);
 
-				const pendingMeta: AsyncActionPendingMeta<Creator> = {
-					parameters: args,
-				};
-
-				publishNewState(produce(getState(), (draft) => onPending(draft, pendingMeta)));
-
-				try {
-					const resolvedValue = await creator(...args);
-
-					const fulfilledMeta: AsyncActionFulfilledMeta<Creator> = {
-						parameters: args,
-						result: resolvedValue as Awaited<ReturnType<Creator>>,
-					};
-
-					publishNewState(produce(getState(), (draft) => onFulfilled(draft, fulfilledMeta)));
-
-					return fulfilledMeta;
-				} catch (e) {
-					const rejectedMeta: AsyncActionRejectedMeta<Creator> = {
-						parameters: args,
-						reason: e,
-					};
-
-					publishNewState(produce(getState(), (draft) => onRejected(draft, rejectedMeta)));
-
-					return rejectedMeta;
-				}
-			};
-		};
+		const setKeyValue: Store<State>["setKeyValue"] = setKeyValueImpl(transformState);
 
 		return {
+			setKeyValue,
 			setState,
 			getState,
 			createAction,
@@ -107,35 +59,9 @@ export const makeStore = <State extends object>(config: MakeStoreConfig<State>):
 		<StoreContext.Provider value={store}>{children}</StoreContext.Provider>
 	);
 
-	const createSelector: Store<State>["createSelector"] =
-		<Selected extends Selector<State>>(selector: Selected) =>
-		() => {
-			const useEnhancedSelector = () => {
-				const contextStore = useContext(StoreContext) as Store<State>;
+	const createSelector: Store<State>["createSelector"] = createSelectorImpl(StoreContext);
 
-				if (!contextStore) {
-					throw new Error("useSelector must be used within a Provider.");
-				}
-
-				const [selectedState, setSelectedState] = useState(() => selector(contextStore.getState()));
-
-				useEffect(() => {
-					const updateSelectedState = () => {
-						const selectedValue = selector(contextStore.getState());
-
-						if (JSON.stringify(selectedValue) !== JSON.stringify(selectedState)) {
-							setSelectedState(selector(contextStore.getState()));
-						}
-					};
-
-					return contextStore.subscribe(updateSelectedState);
-				}, [selectedState, selector, contextStore]);
-
-				return selectedState;
-			};
-
-			return useEnhancedSelector();
-		};
+	const useSelectValue: Store<State>["useSelectValue"] = useSelectedValueImpl(createSelector);
 
 	const withStateProvider = getWithStateProviderHoc(Provider);
 
@@ -143,6 +69,7 @@ export const makeStore = <State extends object>(config: MakeStoreConfig<State>):
 		...store,
 		Provider,
 		createSelector,
+		useSelectValue,
 		withStateProvider,
 	};
 };

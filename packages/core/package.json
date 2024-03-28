@@ -1,6 +1,6 @@
 {
   "name": "@quickstate/core",
-  "version": "1.1.3",
+  "version": "1.1.3-1711646849",
   "private": false,
   "description": "QuickState is a lightweight and highly efficient state management library for React. It provides fast performance with minimal overhead. Thanks to its user-friendly API, it allows for easy integration and seamless state management.",
   "repository": {
@@ -14,7 +14,6 @@
     "tsc-check": "tsc --noEmit",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix"
   },
-
   "type": "module",
   "exports": {
     ".": {
@@ -48,6 +47,9 @@
     "url": "https://github.com/xpatrykk/quickstate/issues"
   },
   "homepage": "https://github.com/xpatrykk/quickstate",
+  "dependencies": {
+    "immer": "^10.0.3"
+  },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.7",
@@ -63,10 +65,7 @@
     "prettier": "^3.0.3",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
-  },
-  "dependencies": {
-    "immer": "^10.0.3",
+    "typescript": "^5.2.2",
     "unbuild": "^2.0.0"
   },
   "peerDependencies": {

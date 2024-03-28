@@ -6,7 +6,11 @@ export interface MakeStoreConfig<State extends object> {
 	initialState: State;
 }
 
-type CreateActionReturn<State extends object> = State | void | undefined;
+export type CreateActionReturn<State extends object> = State | void | undefined;
+
+export type TransformState<State extends object> = (producer: StateTransformer<State>) => void;
+
+export type StateTransformer<State extends object> = (state: Draft<State>) => any;
 
 export type Action<State extends object> = (state: Draft<State>) => CreateActionReturn<Draft<State>>;
 
@@ -45,6 +49,10 @@ export type AsyncActionWithPayload<State extends object, Creator extends AsyncAc
 export interface StoreBase<State extends object> {
 	getState: () => State;
 	setState(state: State): void;
+	setKeyValue<Key extends keyof State, KeyValue extends State[Key] extends object ? Partial<State[Key]> : State[Key]>(
+		key: Key,
+		value: KeyValue
+	): void;
 	createAction(action: Action<State>): () => void;
 	createAction<Payload>(action: ActionWithPayload<State, Payload>): (payload: Payload) => void;
 	createAsyncAction<Creator extends AsyncActionCreator>(
@@ -59,6 +67,7 @@ export type WithStateProviderHoc = ReturnType<typeof getWithStateProviderHoc>;
 
 export interface Store<State extends object> extends StoreBase<State> {
 	createSelector: <Selected extends Selector<State>>(selector: Selected) => () => ReturnType<Selected>;
+	useSelectValue: <Key extends keyof State>(key: Key) => State[Key];
 	Provider: ({children}: {children: React.ReactNode}) => React.JSX.Element;
 	withStateProvider: WithStateProviderHoc;
 }

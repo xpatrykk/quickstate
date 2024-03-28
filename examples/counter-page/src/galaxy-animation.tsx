@@ -81,6 +81,8 @@ export const GalaxyAnimation = () => {
 	useEffect(() => {
 		executeFrame();
 
+		console.log("COUNT", count);
+
 		return () => {
 			if (animationFrameId.current) {
 				cancelAnimationFrame(animationFrameId.current);
