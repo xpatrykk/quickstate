@@ -97,8 +97,13 @@ export type Selector<State extends object> = (state: State) => any;
 
 export type WithStateProviderHoc = ReturnType<typeof getWithStateProviderHoc>;
 
+export type SelectorMemoizationOptions<State> = {
+	useMemoization?: boolean;
+	isEqual?: (prevState: State, nextState: State) => boolean;
+};
+
 export interface Store<State extends object> extends StoreBase<State> {
-	createSelector: <Selected extends Selector<State>>(selector: Selected) => () => ReturnType<Selected>;
+	createSelector: <Selected extends Selector<State>>(selector: Selected, options?: SelectorMemoizationOptions<State>) => () => ReturnType<Selected>;
 	useSelectValue: <Key extends keyof State>(key: Key) => State[Key];
 	Provider: ({children}: {children: React.ReactNode; resetTrigger?: ResetTrigger}) => React.JSX.Element;
 	withStateProvider: WithStateProviderHoc;

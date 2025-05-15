@@ -1,6 +1,6 @@
 {
   "name": "@quickstate/core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "private": false,
   "description": "QuickState is a lightweight and highly efficient state management library for React. It provides fast performance with minimal overhead. Thanks to its user-friendly API, it allows for easy integration and seamless state management.",
   "repository": {
